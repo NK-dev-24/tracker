@@ -1,25 +1,34 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap");
-
 @import "tailwindcss";
 
+/* ─────────────────────────────────
+   Font System (via next/font/google)
+   
+   --font-body    → DM Sans     — all body, UI, buttons, labels
+   --font-heading → Syne        — hero text, section titles only
+   --font-mono    → JetBrains Mono — data values, counters, tags
+───────────────────────────────── */
+
 :root {
+  /* Colors */
   --bg: #0a0a0a;
   --bg-2: #111111;
-  --bg-3: #1a1a1a;
-  --border: #222222;
-  --border-bright: #333333;
-  --text-primary: #f0f0f0;
+  --bg-3: #181818;
+  --border: #1e1e1e;
+  --border-bright: #2e2e2e;
+  --text-primary: #efefef;
   --text-secondary: #888888;
   --text-muted: #444444;
-  --accent: #e8ff47;
-  --accent-dim: rgba(232, 255, 71, 0.12);
-  --danger: #ff3b3b;
-  --danger-dim: rgba(255, 59, 59, 0.12);
-  --success: #3bff8a;
-  --success-dim: rgba(59, 255, 138, 0.08);
+  --accent: #d4f23d;
+  --accent-dim: rgba(212, 242, 61, 0.10);
+  --danger: #ff4444;
+  --danger-dim: rgba(255, 68, 68, 0.10);
+  --success: #2dcc70;
+  --success-dim: rgba(45, 204, 112, 0.08);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -28,14 +37,29 @@
 html {
   background: var(--bg);
   color: var(--text-primary);
-  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-family: var(--font-body), system-ui, -apple-system, sans-serif;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   background: var(--bg);
   min-height: 100svh;
+}
+
+/* Heading font — Syne for display/titles */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+
+/* Mono utility — JetBrains Mono for data */
+.mono {
+  font-family: var(--font-mono), "Courier New", monospace;
 }
 
 /* Scrollbar */
@@ -52,13 +76,15 @@ body {
   border-radius: 2px;
 }
 
-/* Monospace utility */
-.mono {
-  font-family: "Space Mono", monospace;
-}
-
 /* Selection */
 ::selection {
   background: var(--accent);
   color: #000;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
 }

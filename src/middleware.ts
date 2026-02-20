@@ -5,7 +5,6 @@ export async function middleware(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // Skip auth if env vars are not set (local dev without Supabase)
     if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === "your_supabase_project_url") {
         return NextResponse.next({ request });
     }
@@ -14,13 +13,9 @@ export async function middleware(request: NextRequest) {
 
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
         cookies: {
-            getAll() {
-                return request.cookies.getAll();
-            },
+            getAll() { return request.cookies.getAll(); },
             setAll(cookiesToSet) {
-                cookiesToSet.forEach(({ name, value }) =>
-                    request.cookies.set(name, value)
-                );
+                cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
                 supabaseResponse = NextResponse.next({ request });
                 cookiesToSet.forEach(({ name, value, options }) =>
                     supabaseResponse.cookies.set(name, value, options)
@@ -29,13 +24,10 @@ export async function middleware(request: NextRequest) {
         },
     });
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
-
+    const { data: { user } } = await supabase.auth.getUser();
     const { pathname } = request.nextUrl;
 
-    // Public routes
+    // Always allow: public, auth, api routes
     if (
         pathname === "/" ||
         pathname.startsWith("/auth") ||
@@ -44,21 +36,29 @@ export async function middleware(request: NextRequest) {
         return supabaseResponse;
     }
 
-    // If not logged in, redirect to landing
+    // Not logged in → landing
     if (!user) {
         return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // Check if user has paid
+    // /onboarding → only needs auth, not payment
+    if (pathname.startsWith("/onboarding")) {
+        return supabaseResponse;
+    }
+
+    // /dashboard → needs paid
     if (pathname.startsWith("/dashboard")) {
         const { data: profile } = await supabase
             .from("profiles")
-            .select("has_paid")
+            .select("has_paid, onboarding_complete")
             .eq("id", user.id)
             .single();
 
+        if (!profile?.onboarding_complete) {
+            return NextResponse.redirect(new URL("/onboarding", request.url));
+        }
         if (!profile?.has_paid) {
-            return NextResponse.redirect(new URL("/", request.url));
+            return NextResponse.redirect(new URL("/onboarding?step=paywall", request.url));
         }
     }
 
