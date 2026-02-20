@@ -571,13 +571,14 @@ export default function LandingClient() {
                             marginBottom: "8px",
                         }}
                     >
-                        What are your tasks for today?
+                        Become someone you actually respect.
                     </motion.h1>
                     <motion.p
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.13 }}
                         style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center", marginBottom: "36px", lineHeight: 1.6 }}
                     >
-                        Complete all of them before midnight — or reset to Day 0.
+                        Six tasks. Every day. Before midnight. Miss one and you start over.
+                        Try it right now — no signup needed.
                     </motion.p>
 
                     {/* Checklist card */}
@@ -672,7 +673,7 @@ export default function LandingClient() {
                             <ChevronRight size={15} />
                         </motion.button>
                         <p style={{ fontSize: "11px", color: "var(--text-muted)", textAlign: "center", marginTop: "10px" }}>
-                            One-time unlock · $4 · No subscription, ever
+                            Join people already on their streak · $4 one-time · No subscription
                         </p>
                     </motion.div>
                 </section>
@@ -685,10 +686,11 @@ export default function LandingClient() {
                             fontSize: "clamp(30px, 6vw, 48px)", fontWeight: "700",
                             lineHeight: 1.08, letterSpacing: "-0.025em", marginBottom: "22px",
                         }}>
-                            Why 75 days<br />of hard?
+                            Discipline is a<br />decision, not a feeling.
                         </h2>
                         <p style={{ fontSize: "15px", color: "var(--text-secondary)", lineHeight: 1.8, marginBottom: "44px", maxWidth: "480px" }}>
-                            Most people start a habit and quit the moment it gets inconvenient. The 75 Hard protocol removes that option. Miss a single task and you start over from Day 0 — no exceptions, no rest days, no half-measures.
+                            You&apos;ve started before. You&apos;ve quit before. So has everyone here.
+                            The difference with 75 Hard is the reset — miss one task and you start over from Day 0, no matter what day you&apos;re on. No negotiation. That ruthlessness is the point.
                         </p>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
                             {WHY_CARDS.map((card) => {
@@ -777,11 +779,12 @@ export default function LandingClient() {
                         lineHeight: 0.95, letterSpacing: "-0.035em", marginBottom: "24px",
                     }}>
                         75 DAYS.<br />
-                        <span style={{ color: "var(--text-muted)" }}>ARE YOU</span><br />
-                        READY?
+                        <span style={{ color: "var(--text-muted)" }}>WHO WILL</span><br />
+                        YOU BE?
                     </h2>
-                    <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "36px", lineHeight: 1.75, maxWidth: "360px", margin: "0 auto 36px" }}>
-                        Stop planning to start. The only way to know if you can is to begin today.
+                    <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "36px", lineHeight: 1.75, maxWidth: "380px", margin: "0 auto 36px" }}>
+                        A year from now, you&apos;ll either have done this or have another reason why you didn&apos;t.
+                        The people who finish aren&apos;t special. They just started.
                     </p>
                     <motion.button
                         onClick={openLogin}
