@@ -1,32 +1,13 @@
 "use client";
 
-import {
-    useState,
-    useEffect,
-    useCallback,
-    useRef,
-} from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import {
-    Check,
-    X,
-    ChevronRight,
-    Star,
-    AlertCircle,
-    Trophy,
-    Zap,
-    RotateCcw,
-    Camera,
-    BookOpen,
-    Menu,
-    ArrowUpRight,
-} from "lucide-react";
+import { Check, ChevronRight, Star, AlertCircle, ArrowRight, X, ArrowUpRight } from "lucide-react";
 import confetti from "canvas-confetti";
 import { TASKS } from "@/lib/tasks";
-import LoginForm from "@/components/LoginForm";
 
 /* ─────────────────────────────────
-   Data
+   Constants
 ───────────────────────────────── */
 const LS_KEY = "75hard-demo-tasks";
 
@@ -46,33 +27,24 @@ const CHANGELOG = [
 ];
 
 const WHY_CARDS = [
-    { icon: Zap, title: "Mental toughness", desc: "75 consecutive days builds a different kind of discipline." },
-    { icon: RotateCcw, title: "Zero tolerance", desc: "One miss resets everything. That's the rule that makes it real." },
-    { icon: Camera, title: "Visual proof", desc: "Daily progress photos show you the person you're becoming." },
-    { icon: BookOpen, title: "Feed your mind", desc: "10 pages daily. How much have you actually read this year?" },
+    { icon: "⚡", iconLabel: "discipline", title: "Mental toughness", desc: "75 consecutive days builds a different kind of discipline." },
+    { icon: "↺", iconLabel: "reset", title: "Zero tolerance", desc: "One miss resets everything. That's the rule that makes it real." },
+    { icon: "◎", iconLabel: "photo", title: "Visual proof", desc: "Daily progress photos show you the person you're becoming." },
+    { icon: "◫", iconLabel: "book", title: "Feed your mind", desc: "10 pages daily. How much have you actually read this year?" },
 ];
 
 /* ─────────────────────────────────
-   Scroll utility
+   Helpers
 ───────────────────────────────── */
 function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-/* ─────────────────────────────────
-   Shared primitives
-───────────────────────────────── */
-
 function NavBtn({ label, onClick }: { label: string; onClick: () => void }) {
     return (
         <button
             onClick={onClick}
-            style={{
-                background: "none", border: "none", cursor: "pointer",
-                fontSize: "13px", fontFamily: "var(--font-body)",
-                color: "var(--text-secondary)", padding: "6px 10px",
-                borderRadius: "4px", transition: "color 0.15s",
-            }}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "13px", fontFamily: "var(--font-body)", color: "var(--text-secondary)", padding: "6px 10px", borderRadius: "4px", transition: "color 0.15s" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
         >
@@ -83,14 +55,7 @@ function NavBtn({ label, onClick }: { label: string; onClick: () => void }) {
 
 function Tag({ children }: { children: React.ReactNode }) {
     return (
-        <span
-            className="mono"
-            style={{
-                fontSize: "10px", letterSpacing: "0.18em",
-                color: "var(--text-muted)", textTransform: "uppercase",
-                display: "block", marginBottom: "14px",
-            }}
-        >
+        <span className="mono" style={{ fontSize: "10px", letterSpacing: "0.18em", color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: "14px" }}>
             {children}
         </span>
     );
@@ -99,46 +64,22 @@ function Tag({ children }: { children: React.ReactNode }) {
 /* ─────────────────────────────────
    Modal shell
 ───────────────────────────────── */
-const panelVariants = {
-    hidden: { opacity: 0, scale: 0.94, y: 12 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring" as const, stiffness: 360, damping: 30 } },
-    exit: { opacity: 0, scale: 0.94, y: 12, transition: { duration: 0.14 } },
-};
-
-function ModalShell({ onClose, wide, children }: { onClose: () => void; wide?: boolean; children: React.ReactNode }) {
+function ModalShell({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
     useEffect(() => {
-        const handler = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-        document.addEventListener("keydown", handler);
-        return () => document.removeEventListener("keydown", handler);
+        const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+        document.addEventListener("keydown", h);
+        return () => document.removeEventListener("keydown", h);
     }, [onClose]);
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose}
-            style={{
-                position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                zIndex: 100, padding: "20px", backdropFilter: "blur(6px)",
-            }}
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "20px", backdropFilter: "blur(6px)" }}>
             <motion.div
-                variants={panelVariants} initial="hidden" animate="visible" exit="exit"
+                initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 12 }}
+                transition={{ type: "spring", stiffness: 360, damping: 30 }}
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                    background: "var(--bg-2)", border: "1px solid var(--border-bright)",
-                    borderRadius: "10px", padding: "32px", width: "100%",
-                    maxWidth: wide ? "520px" : "420px", position: "relative",
-                }}
-            >
-                <button
-                    onClick={onClose} aria-label="Close"
-                    style={{
-                        position: "absolute", top: "16px", right: "16px",
-                        background: "none", border: "none",
-                        color: "var(--text-muted)", cursor: "pointer", padding: "4px",
-                    }}
-                >
+                style={{ background: "var(--bg-2)", border: "1px solid var(--border-bright)", borderRadius: "10px", padding: "32px", width: "100%", maxWidth: "420px", position: "relative" }}>
+                <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px" }}>
                     <X size={17} />
                 </button>
                 {children}
@@ -147,69 +88,37 @@ function ModalShell({ onClose, wide, children }: { onClose: () => void; wide?: b
     );
 }
 
-/* ─────────────────────────────────
-   Simple form helper
-───────────────────────────────── */
-function SimpleForm({
-    fields, submitLabel, successMsg, accentBg = "var(--bg-3)",
-}: {
+function SimpleForm({ fields, submitLabel, successMsg, accentBg = "var(--text-primary)" }: {
     fields: { key: string; placeholder: string; multiline?: boolean }[];
-    submitLabel: string;
-    successMsg: string;
-    accentBg?: string;
+    submitLabel: string; successMsg: string; accentBg?: string;
 }) {
     const [values, setValues] = useState<Record<string, string>>({});
     const [sent, setSent] = useState(false);
-
-    const inputStyle: React.CSSProperties = {
-        width: "100%", background: "var(--bg-3)", border: "1px solid var(--border-bright)",
-        borderRadius: "6px", padding: "11px 14px", color: "var(--text-primary)",
-        fontSize: "13px", fontFamily: "var(--font-body)", outline: "none", marginBottom: "8px",
-        transition: "border-color 0.15s",
-    };
-
-    if (sent) {
-        return (
-            <p style={{ fontSize: "13px", color: "var(--success)", textAlign: "center", padding: "24px 0" }}>
-                {successMsg}
-            </p>
-        );
-    }
-
+    const inputStyle: React.CSSProperties = { width: "100%", background: "var(--bg-3)", border: "1px solid var(--border-bright)", borderRadius: "6px", padding: "11px 14px", color: "var(--text-primary)", fontSize: "13px", fontFamily: "var(--font-body)", outline: "none", marginBottom: "8px" };
+    if (sent) return <p style={{ fontSize: "13px", color: "var(--success)", textAlign: "center", padding: "24px 0" }}>{successMsg}</p>;
     return (
         <>
-            {fields.map((f) =>
-                f.multiline ? (
-                    <textarea
-                        key={f.key} placeholder={f.placeholder} rows={4}
-                        value={values[f.key] || ""}
-                        onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                        style={{ ...inputStyle, resize: "none" }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "var(--border-bright)")}
-                    />
-                ) : (
-                    <input
-                        key={f.key} placeholder={f.placeholder}
-                        value={values[f.key] || ""}
-                        onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                        style={inputStyle}
-                    />
-                )
+            {fields.map((f) => f.multiline
+                ? <textarea key={f.key} placeholder={f.placeholder} rows={4} value={values[f.key] || ""} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} style={{ ...inputStyle, resize: "none" }} />
+                : <input key={f.key} placeholder={f.placeholder} value={values[f.key] || ""} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} style={inputStyle} />
             )}
-            <button
-                onClick={() => { if (fields.every((f) => values[f.key]?.trim())) setSent(true); }}
-                style={{
-                    width: "100%", marginTop: "4px", padding: "12px",
-                    background: accentBg === "var(--bg-3)" ? "var(--text-primary)" : accentBg,
-                    color: "#000", border: "none", borderRadius: "6px",
-                    fontSize: "13px", fontWeight: "600", fontFamily: "var(--font-body)",
-                    cursor: "pointer",
-                }}
-            >
+            <button onClick={() => { if (fields.every((f) => values[f.key]?.trim())) setSent(true); }}
+                style={{ width: "100%", marginTop: "4px", padding: "12px", background: accentBg, color: "#000", border: "none", borderRadius: "6px", fontSize: "13px", fontWeight: "600", fontFamily: "var(--font-body)", cursor: "pointer" }}>
                 {submitLabel}
             </button>
         </>
     );
+}
+
+/* ─────────────────────────────────
+   Google sign-in helper (for Login button)
+───────────────────────────────── */
+async function signInWithGoogle() {
+    const isConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_project_url";
+    if (!isConfigured) { alert("Supabase not configured — fill in .env.local first."); return; }
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback` } });
 }
 
 /* ─────────────────────────────────
@@ -222,11 +131,7 @@ function BugModal({ onClose }: { onClose: () => void }) {
                 <AlertCircle size={16} color="var(--accent)" />
                 <span style={{ fontSize: "14px", fontWeight: "600" }}>Report a bug</span>
             </div>
-            <SimpleForm
-                fields={[{ key: "msg", placeholder: "What happened? What did you expect?", multiline: true }]}
-                submitLabel="Send report"
-                successMsg="Got it — thanks for helping improve this."
-            />
+            <SimpleForm fields={[{ key: "msg", placeholder: "What happened? What did you expect?", multiline: true }]} submitLabel="Send report" successMsg="Got it — thanks for helping." />
         </ModalShell>
     );
 }
@@ -238,18 +143,8 @@ function TestimonialModal({ onClose }: { onClose: () => void }) {
                 <Star size={16} color="var(--accent)" fill="var(--accent)" />
                 <span style={{ fontSize: "14px", fontWeight: "600" }}>Write a testimonial</span>
             </div>
-            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px" }}>
-                Your story might give someone else the push they need.
-            </p>
-            <SimpleForm
-                fields={[
-                    { key: "name", placeholder: "Your name" },
-                    { key: "text", placeholder: "How has the 75-day challenge changed you?", multiline: true },
-                ]}
-                submitLabel="Submit"
-                successMsg="Thank you — your story matters."
-                accentBg="var(--accent)"
-            />
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px" }}>Your story might give someone else the push they need.</p>
+            <SimpleForm fields={[{ key: "name", placeholder: "Your name" }, { key: "text", placeholder: "How has the challenge changed you?", multiline: true }]} submitLabel="Submit" successMsg="Thank you — your story matters." accentBg="var(--accent)" />
         </ModalShell>
     );
 }
@@ -261,84 +156,15 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
                 <Tag>Changelog</Tag>
                 <h2 style={{ fontSize: "20px", fontWeight: "700", letterSpacing: "-0.02em" }}>What&apos;s new</h2>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                {CHANGELOG.map((entry, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            padding: "16px 0",
-                            borderBottom: i < CHANGELOG.length - 1 ? "1px solid var(--border)" : "none",
-                            display: "flex", gap: "16px",
-                        }}
-                    >
-                        <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", width: "56px", flexShrink: 0, paddingTop: "3px" }}>
-                            v{entry.version}
-                        </span>
-                        <div>
-                            <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
-                                {entry.date}
-                            </span>
-                            <span style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.6 }}>{entry.note}</span>
-                        </div>
+            {CHANGELOG.map((entry, i) => (
+                <div key={i} style={{ padding: "14px 0", borderBottom: i < CHANGELOG.length - 1 ? "1px solid var(--border)" : "none", display: "flex", gap: "16px" }}>
+                    <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", width: "40px", flexShrink: 0, paddingTop: "2px" }}>v{entry.version}</span>
+                    <div>
+                        <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>{entry.date}</span>
+                        <span style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.6 }}>{entry.note}</span>
                     </div>
-                ))}
-            </div>
-        </ModalShell>
-    );
-}
-
-function LoginModal({ onClose }: { onClose: () => void }) {
-    const paymentLink = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK || "#";
-    return (
-        <ModalShell onClose={onClose}>
-            <Tag>Unlock full tracking</Tag>
-            <h2 style={{ fontSize: "22px", fontWeight: "700", letterSpacing: "-0.025em", marginBottom: "6px", lineHeight: 1.2 }}>
-                Save your streak.<br />Own your 75 days.
-            </h2>
-            <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "24px", lineHeight: 1.7 }}>
-                Daily progress saved. Miss any task before midnight — reset to Day 0. No exceptions.
-            </p>
-
-            {/* Price */}
-            <div style={{
-                background: "var(--accent-dim)", border: "1px solid var(--accent)",
-                borderRadius: "8px", padding: "16px 20px", marginBottom: "16px",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-            }}>
-                <div>
-                    <div className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.1em" }}>ONE-TIME · FOREVER</div>
-                    <div className="mono" style={{ fontSize: "36px", fontWeight: "700", color: "var(--accent)", lineHeight: 1 }}>$4</div>
                 </div>
-                <div style={{ fontSize: "12px", color: "var(--text-secondary)", textAlign: "right", lineHeight: 1.8 }}>
-                    No subscription<br />No refunds.<br />Commitment only.
-                </div>
-            </div>
-
-            <a
-                href={paymentLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                    width: "100%", padding: "14px", background: "var(--accent)", color: "#000",
-                    textDecoration: "none", textAlign: "center", fontWeight: "700",
-                    fontSize: "13px", borderRadius: "6px", marginBottom: "24px",
-                    fontFamily: "var(--font-body)",
-                }}
-            >
-                Pay $4 and start
-                <ArrowUpRight size={15} />
-            </a>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
-                <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.15em", whiteSpace: "nowrap" }}>
-                    ALREADY PAID
-                </span>
-                <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
-            </div>
-
-            <LoginForm />
+            ))}
         </ModalShell>
     );
 }
@@ -346,13 +172,8 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 /* ─────────────────────────────────
    Task row
 ───────────────────────────────── */
-function TaskRow({
-    task, checked, onToggle, index,
-}: {
-    task: typeof TASKS[0]; checked: boolean; onToggle: () => void; index: number;
-}) {
+function TaskRow({ task, checked, onToggle, index }: { task: typeof TASKS[0]; checked: boolean; onToggle: () => void; index: number }) {
     const controls = useAnimation();
-
     const handleClick = useCallback(async () => {
         await controls.start({ scale: 0.84, transition: { duration: 0.07 } });
         await controls.start({ scale: 1.12, transition: { duration: 0.10 } });
@@ -363,68 +184,26 @@ function TaskRow({
     return (
         <motion.div
             role="button" tabIndex={0} aria-pressed={checked}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.055, type: "spring", stiffness: 320, damping: 30 }}
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.055, type: "spring", stiffness: 320, damping: 30 }}
             whileHover={{ backgroundColor: checked ? "rgba(45,204,112,0.05)" : "rgba(255,255,255,0.025)" }}
             whileTap={{ scale: 0.995 }}
-            onClick={handleClick}
-            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleClick()}
-            style={{
-                display: "flex", alignItems: "center", gap: "14px",
-                padding: "16px 20px", cursor: "pointer",
-                borderBottom: "1px solid var(--border)",
-                background: checked ? "rgba(45,204,112,0.02)" : "transparent",
-                transition: "background 0.2s ease", userSelect: "none",
-            }}
-        >
-            {/* Checkbox */}
-            <motion.div
-                animate={controls}
-                style={{
-                    width: "24px", height: "24px", flexShrink: 0,
-                    borderRadius: "5px", border: `2px solid ${checked ? "var(--success)" : "var(--border-bright)"}`,
-                    background: checked ? "var(--success)" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "background 0.15s, border-color 0.15s",
-                }}
-            >
+            onClick={handleClick} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleClick()}
+            style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px 20px", cursor: "pointer", borderBottom: "1px solid var(--border)", background: checked ? "rgba(45,204,112,0.02)" : "transparent", transition: "background 0.2s", userSelect: "none" }}>
+            <motion.div animate={controls}
+                style={{ width: "24px", height: "24px", flexShrink: 0, borderRadius: "5px", border: `2px solid ${checked ? "var(--success)" : "var(--border-bright)"}`, background: checked ? "var(--success)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s, border-color 0.15s" }}>
                 <AnimatePresence>
                     {checked && (
-                        <motion.div
-                            key="check"
-                            initial={{ scale: 0, rotate: -12 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            exit={{ scale: 0 }}
-                            transition={{ type: "spring", stiffness: 660, damping: 24 }}
-                        >
+                        <motion.div key="check" initial={{ scale: 0, rotate: -12 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} transition={{ type: "spring", stiffness: 660, damping: 24 }}>
                             <Check size={13} color="#000" strokeWidth={3} />
                         </motion.div>
                     )}
                 </AnimatePresence>
             </motion.div>
-
-            {/* Text */}
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                    fontSize: "13px", fontWeight: "600", letterSpacing: "0.06em",
-                    textTransform: "uppercase", color: checked ? "var(--text-muted)" : "var(--text-primary)",
-                    textDecoration: checked ? "line-through" : "none",
-                    transition: "color 0.2s", textDecorationColor: "var(--text-muted)",
-                }}>
-                    {task.label}
-                </div>
-                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-                    {task.description}
-                </div>
+                <div style={{ fontSize: "13px", fontWeight: "600", letterSpacing: "0.06em", textTransform: "uppercase", color: checked ? "var(--text-muted)" : "var(--text-primary)", textDecoration: checked ? "line-through" : "none", transition: "color 0.2s" }}>{task.label}</div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>{task.description}</div>
             </div>
-
-            {/* Status dot */}
-            <div style={{
-                width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0,
-                background: checked ? "var(--success)" : "var(--border-bright)",
-                transition: "background 0.2s",
-            }} />
+            <div style={{ width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, background: checked ? "var(--success)" : "var(--border-bright)", transition: "background 0.2s" }} />
         </motion.div>
     );
 }
@@ -432,24 +211,20 @@ function TaskRow({
 /* ─────────────────────────────────
    Main component
 ───────────────────────────────── */
-type ModalType = "login" | "bug" | "testimonial" | "changelog" | null;
+type ModalType = "bug" | "testimonial" | "changelog" | null;
 
 export default function LandingClient() {
     const [checkedTasks, setCheckedTasks] = useState<Set<string>>(new Set());
     const [modal, setModal] = useState<ModalType>(null);
     const [hydrated, setHydrated] = useState(false);
+    const [loginLoading, setLoginLoading] = useState(false);
     const confettiFired = useRef(false);
 
-    // Load from localStorage after mount
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem(LS_KEY);
-            if (saved) setCheckedTasks(new Set(JSON.parse(saved)));
-        } catch { /* ignore */ }
+        try { const s = localStorage.getItem(LS_KEY); if (s) setCheckedTasks(new Set(JSON.parse(s))); } catch { /* ignore */ }
         setHydrated(true);
     }, []);
 
-    // Persist on change
     useEffect(() => {
         if (hydrated) localStorage.setItem(LS_KEY, JSON.stringify([...checkedTasks]));
     }, [checkedTasks, hydrated]);
@@ -467,252 +242,142 @@ export default function LandingClient() {
         setTimeout(() => { confettiFired.current = false; }, 6000);
     }, []);
 
-    useEffect(() => {
-        if (allDone && hydrated) fireConfetti();
-    }, [allDone, hydrated, fireConfetti]);
+    useEffect(() => { if (allDone && hydrated) fireConfetti(); }, [allDone, hydrated, fireConfetti]);
 
     const toggleTask = useCallback((id: string) => {
-        setCheckedTasks((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
+        setCheckedTasks((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
     }, []);
 
-    const openLogin = useCallback(() => setModal("login"), []);
+    const handleLogin = useCallback(async () => {
+        setLoginLoading(true);
+        await signInWithGoogle();
+        setLoginLoading(false);
+    }, []);
+
     const closeModal = useCallback(() => setModal(null), []);
 
     return (
         <>
-            {/* Modals */}
             <AnimatePresence>
                 {modal === "bug" && <BugModal key="bug" onClose={closeModal} />}
                 {modal === "testimonial" && <TestimonialModal key="testimonial" onClose={closeModal} />}
                 {modal === "changelog" && <ChangelogModal key="changelog" onClose={closeModal} />}
-                {modal === "login" && <LoginModal key="login" onClose={closeModal} />}
             </AnimatePresence>
 
             <div style={{ minHeight: "100svh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
 
                 {/* ── NAV ── */}
-                <nav style={{
-                    position: "sticky", top: 0, zIndex: 50,
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "13px 32px",
-                    background: "rgba(10,10,10,0.9)", backdropFilter: "blur(20px)",
-                    borderBottom: "1px solid var(--border)",
-                }}>
-                    {/* Logo */}
-                    <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
-                    >
+                <nav style={{ position: "sticky", top: 0, zIndex: 50, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 32px", background: "rgba(10,10,10,0.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--border)" }}>
+                    <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
                         <span className="mono" style={{ fontSize: "15px", fontWeight: "700", letterSpacing: "0.16em", color: "var(--text-primary)" }}>75</span>
-                        <span className="mono" style={{
-                            fontSize: "9px", letterSpacing: "0.14em", color: "#000",
-                            background: "var(--accent)", padding: "2px 7px", borderRadius: "3px",
-                        }}>BETA</span>
+                        <span className="mono" style={{ fontSize: "9px", letterSpacing: "0.14em", color: "#000", background: "var(--accent)", padding: "2px 7px", borderRadius: "3px" }}>BETA</span>
                     </button>
-
-                    {/* Actions */}
                     <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
                         <NavBtn label="Benefits" onClick={() => scrollTo("benefits")} />
                         <NavBtn label="Testimonials" onClick={() => scrollTo("testimonials")} />
                         <NavBtn label="Report bug" onClick={() => setModal("bug")} />
                         <NavBtn label="Write testimonial" onClick={() => setModal("testimonial")} />
                         <button
-                            onClick={openLogin}
-                            style={{
-                                marginLeft: "8px", padding: "7px 18px",
-                                border: "1px solid var(--border-bright)", borderRadius: "6px",
-                                background: "none", color: "var(--text-primary)", cursor: "pointer",
-                                fontSize: "13px", fontFamily: "var(--font-body)", fontWeight: "600",
-                                transition: "background 0.15s, color 0.15s",
-                            }}
+                            onClick={handleLogin} disabled={loginLoading}
+                            style={{ marginLeft: "8px", padding: "7px 18px", border: "1px solid var(--border-bright)", borderRadius: "6px", background: "none", color: "var(--text-primary)", cursor: loginLoading ? "wait" : "pointer", fontSize: "13px", fontFamily: "var(--font-body)", fontWeight: "600", transition: "background 0.15s, color 0.15s", opacity: loginLoading ? 0.6 : 1 }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = "var(--text-primary)"; e.currentTarget.style.color = "#000"; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-primary)"; }}
                         >
-                            Login
+                            {loginLoading ? "Loading..." : "Log in"}
                         </button>
                     </div>
                 </nav>
 
                 {/* ── HERO ── */}
-                <section style={{
-                    flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-                    padding: "64px 24px 56px", maxWidth: "600px", margin: "0 auto", width: "100%",
-                }}>
-                    {/* Live badge */}
-                    <motion.div
-                        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                        style={{
-                            display: "inline-flex", alignItems: "center", gap: "8px",
-                            padding: "5px 14px", background: "var(--accent-dim)",
-                            border: "1px solid var(--accent)", borderRadius: "20px", marginBottom: "32px",
-                        }}
-                    >
-                        <motion.span
-                            animate={{ opacity: [1, 0.2, 1] }}
-                            transition={{ repeat: Infinity, duration: 2.2 }}
-                            style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--accent)", display: "block" }}
-                        />
-                        <span className="mono" style={{ fontSize: "10px", color: "var(--accent)", letterSpacing: "0.18em" }}>
-                            75 DAYS. NO EXCUSES.
-                        </span>
+                <section style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "64px 24px 56px", maxWidth: "600px", margin: "0 auto", width: "100%" }}>
+                    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "5px 14px", background: "var(--accent-dim)", border: "1px solid var(--accent)", borderRadius: "20px", marginBottom: "32px" }}>
+                        <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ repeat: Infinity, duration: 2.2 }}
+                            style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--accent)", display: "block" }} />
+                        <span className="mono" style={{ fontSize: "10px", color: "var(--accent)", letterSpacing: "0.18em" }}>75 DAYS. NO EXCUSES.</span>
                     </motion.div>
 
-                    {/* Headline */}
-                    <motion.h1
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
-                        style={{
-                            fontSize: "clamp(18px, 4vw, 22px)", fontWeight: "400",
-                            color: "var(--text-secondary)", textAlign: "center",
-                            fontFamily: "var(--font-body)",
-                            marginBottom: "8px",
-                        }}
-                    >
+                    <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
+                        style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: "400", color: "var(--text-secondary)", textAlign: "center", fontFamily: "var(--font-body)", marginBottom: "8px" }}>
                         Become someone you actually respect.
                     </motion.h1>
-                    <motion.p
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.13 }}
-                        style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center", marginBottom: "36px", lineHeight: 1.6 }}
-                    >
-                        Six tasks. Every day. Before midnight. Miss one and you start over.
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.13 }}
+                        style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center", marginBottom: "36px", lineHeight: 1.6 }}>
+                        Six tasks. Every day. Before midnight. Miss one and you start over.<br />
                         Try it right now — no signup needed.
                     </motion.p>
 
-                    {/* Checklist card */}
-                    <div style={{
-                        width: "100%", border: "1px solid var(--border)",
-                        borderRadius: "10px", overflow: "hidden", marginBottom: "16px",
-                    }}>
-                        {/* Card header */}
-                        <div style={{
-                            display: "flex", justifyContent: "space-between", alignItems: "center",
-                            padding: "13px 20px", borderBottom: "1px solid var(--border)", background: "var(--bg-2)",
-                        }}>
-                            <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.18em" }}>
-                                THE 6 DAILY TASKS
-                            </span>
+                    {/* Demo checklist */}
+                    <div style={{ width: "100%", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden", marginBottom: "16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 20px", borderBottom: "1px solid var(--border)", background: "var(--bg-2)" }}>
+                            <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.18em" }}>THE 6 DAILY TASKS</span>
                             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <span className="mono" style={{ fontSize: "11px", color: allDone ? "var(--success)" : "var(--text-secondary)" }}>
-                                    {doneCount}/{TASKS.length}
-                                </span>
+                                <span className="mono" style={{ fontSize: "11px", color: allDone ? "var(--success)" : "var(--text-secondary)" }}>{doneCount}/{TASKS.length}</span>
                                 <div style={{ width: "60px", height: "2px", background: "var(--border)", borderRadius: "2px", overflow: "hidden" }}>
-                                    <motion.div
-                                        animate={{ width: `${(doneCount / TASKS.length) * 100}%` }}
-                                        transition={{ type: "spring", stiffness: 380, damping: 40 }}
-                                        style={{ height: "100%", background: allDone ? "var(--success)" : "var(--accent)", borderRadius: "2px" }}
-                                    />
+                                    <motion.div animate={{ width: `${(doneCount / TASKS.length) * 100}%` }} transition={{ type: "spring", stiffness: 380, damping: 40 }}
+                                        style={{ height: "100%", background: allDone ? "var(--success)" : "var(--accent)", borderRadius: "2px" }} />
                                 </div>
                             </div>
                         </div>
-
-                        {/* Tasks */}
                         {TASKS.map((task, i) => (
-                            <TaskRow
-                                key={task.id} task={task}
-                                checked={checkedTasks.has(task.id)}
-                                onToggle={() => toggleTask(task.id)}
-                                index={i}
-                            />
+                            <TaskRow key={task.id} task={task} checked={checkedTasks.has(task.id)} onToggle={() => toggleTask(task.id)} index={i} />
                         ))}
                     </div>
 
                     {/* Completion banner */}
                     <AnimatePresence>
                         {allDone && (
-                            <motion.div
-                                key="done"
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: "auto" }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.25 }}
-                                style={{ width: "100%", overflow: "hidden" }}
-                            >
-                                <div style={{
-                                    padding: "18px 20px", marginBottom: "14px",
-                                    background: "var(--success-dim)", border: "1px solid var(--success)",
-                                    borderRadius: "8px", textAlign: "center", display: "flex",
-                                    flexDirection: "column", gap: "4px",
-                                }}>
-                                    <div style={{ display: "flex", justifyContent: "center" }}>
-                                        <Trophy size={18} color="var(--success)" />
-                                    </div>
-                                    <div className="mono" style={{ fontSize: "11px", color: "var(--success)", letterSpacing: "0.14em" }}>
-                                        ALL 6 TASKS COMPLETE
-                                    </div>
-                                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                                        Now imagine doing this every day for 75 days.
-                                    </div>
+                            <motion.div key="done" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }}
+                                style={{ width: "100%", overflow: "hidden", marginBottom: "14px" }}>
+                                <div style={{ padding: "18px 20px", background: "var(--success-dim)", border: "1px solid var(--success)", borderRadius: "8px", textAlign: "center" }}>
+                                    <div className="mono" style={{ fontSize: "11px", color: "var(--success)", letterSpacing: "0.14em", marginBottom: "4px" }}>ALL 6 TASKS COMPLETE</div>
+                                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Now imagine doing this every day for 75 days.</div>
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
 
-                    {/* CTA */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                        style={{ width: "100%" }}
-                    >
-                        <motion.button
-                            onClick={openLogin}
-                            whileHover={{ scale: 1.012 }}
-                            whileTap={{ scale: 0.984 }}
+                    {/* Main CTA — no pricing */}
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ width: "100%" }}>
+                        <motion.a
+                            href="/onboarding"
+                            whileHover={{ scale: 1.012 }} whileTap={{ scale: 0.984 }}
                             transition={{ type: "spring", stiffness: 400, damping: 28 }}
                             style={{
-                                width: "100%", padding: "16px",
-                                background: allDone ? "var(--success)" : "var(--accent)", color: "#000",
-                                border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: "700",
-                                fontFamily: "var(--font-body)", cursor: "pointer",
-                                transition: "background 0.4s ease",
                                 display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                                width: "100%", padding: "16px", background: allDone ? "var(--success)" : "var(--accent)",
+                                color: "#000", textDecoration: "none", borderRadius: "8px", fontSize: "14px",
+                                fontWeight: "700", fontFamily: "var(--font-body)", transition: "background 0.4s ease",
                             }}
                         >
-                            {allDone ? "Start tracking my real streak" : "Track your 75-day streak"}
+                            {allDone ? "Start the real challenge" : "Start the challenge"}
                             <ChevronRight size={15} />
-                        </motion.button>
+                        </motion.a>
                         <p style={{ fontSize: "11px", color: "var(--text-muted)", textAlign: "center", marginTop: "10px" }}>
-                            Join people already on their streak · $4 one-time · No subscription
+                            Already started? <button onClick={handleLogin} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "11px", fontFamily: "var(--font-body)", padding: 0 }}>Log in →</button>
                         </p>
                     </motion.div>
                 </section>
 
-                {/* ── BENEFITS / WHY ── */}
+                {/* ── BENEFITS ── */}
                 <section id="benefits" style={{ borderTop: "1px solid var(--border)", padding: "80px 24px" }}>
                     <div style={{ maxWidth: "600px", margin: "0 auto" }}>
                         <Tag>The philosophy</Tag>
-                        <h2 style={{
-                            fontSize: "clamp(30px, 6vw, 48px)", fontWeight: "700",
-                            lineHeight: 1.08, letterSpacing: "-0.025em", marginBottom: "22px",
-                        }}>
+                        <h2 style={{ fontSize: "clamp(30px, 6vw, 48px)", fontWeight: "700", lineHeight: 1.08, letterSpacing: "-0.025em", marginBottom: "22px" }}>
                             Discipline is a<br />decision, not a feeling.
                         </h2>
                         <p style={{ fontSize: "15px", color: "var(--text-secondary)", lineHeight: 1.8, marginBottom: "44px", maxWidth: "480px" }}>
-                            You&apos;ve started before. You&apos;ve quit before. So has everyone here.
-                            The difference with 75 Hard is the reset — miss one task and you start over from Day 0, no matter what day you&apos;re on. No negotiation. That ruthlessness is the point.
+                            You&apos;ve started before. You&apos;ve quit before. So has everyone here. The difference with 75 Hard is the reset — miss one task and you restart from Day 0, no matter what day you&apos;re on. No negotiation. That ruthlessness is the point.
                         </p>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
-                            {WHY_CARDS.map((card) => {
-                                const Icon = card.icon;
-                                return (
-                                    <motion.div
-                                        key={card.title}
-                                        whileHover={{ y: -2, borderColor: "var(--border-bright)" }}
-                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                        style={{
-                                            padding: "20px", background: "var(--bg-2)",
-                                            border: "1px solid var(--border)", borderRadius: "8px",
-                                        }}
-                                    >
-                                        <div style={{ marginBottom: "12px" }}>
-                                            <Icon size={18} color="var(--text-secondary)" />
-                                        </div>
-                                        <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>{card.title}</div>
-                                        <div style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.6 }}>{card.desc}</div>
-                                    </motion.div>
-                                );
-                            })}
+                            {WHY_CARDS.map((card) => (
+                                <motion.div key={card.title} whileHover={{ y: -2, borderColor: "var(--border-bright)" }} transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    style={{ padding: "20px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "8px" }}>
+                                    <div style={{ marginBottom: "12px", fontSize: "18px", color: "var(--text-secondary)" }}>{card.icon}</div>
+                                    <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>{card.title}</div>
+                                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.6 }}>{card.desc}</div>
+                                </motion.div>
+                            ))}
                         </div>
                     </div>
                 </section>
@@ -721,41 +386,18 @@ export default function LandingClient() {
                 <section id="testimonials" style={{ borderTop: "1px solid var(--border)", padding: "80px 0", overflow: "hidden" }}>
                     <div style={{ maxWidth: "600px", margin: "0 auto 36px", padding: "0 24px" }}>
                         <Tag>From the community</Tag>
-                        <h2 style={{ fontSize: "clamp(26px, 5vw, 38px)", fontWeight: "700", lineHeight: 1.1, letterSpacing: "-0.025em" }}>
-                            Real people.<br />Real streaks.
-                        </h2>
+                        <h2 style={{ fontSize: "clamp(26px, 5vw, 38px)", fontWeight: "700", lineHeight: 1.1, letterSpacing: "-0.025em" }}>Real people.<br />Real streaks.</h2>
                     </div>
-
-                    {/* Scrolling marquee */}
-                    <motion.div
-                        animate={{ x: [0, -1280] }}
-                        transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
-                        style={{ display: "flex", gap: "14px", width: "max-content", paddingLeft: "24px" }}
-                    >
+                    <motion.div animate={{ x: [0, -1280] }} transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
+                        style={{ display: "flex", gap: "14px", width: "max-content", paddingLeft: "24px" }}>
                         {[...TESTIMONIALS, ...TESTIMONIALS].map((t, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    width: "272px", flexShrink: 0,
-                                    padding: "20px", background: "var(--bg-2)",
-                                    border: "1px solid var(--border)", borderRadius: "8px",
-                                }}
-                            >
-                                {/* Stars */}
+                            <div key={i} style={{ width: "272px", flexShrink: 0, padding: "20px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "8px" }}>
                                 <div style={{ display: "flex", gap: "3px", marginBottom: "12px" }}>
-                                    {Array.from({ length: t.stars }).map((_, si) => (
-                                        <Star key={si} size={11} color="var(--accent)" fill="var(--accent)" />
-                                    ))}
+                                    {Array.from({ length: t.stars }).map((_, si) => <Star key={si} size={11} color="var(--accent)" fill="var(--accent)" />)}
                                 </div>
-                                <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.65, marginBottom: "16px" }}>
-                                    &ldquo;{t.text}&rdquo;
-                                </p>
+                                <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.65, marginBottom: "16px" }}>&ldquo;{t.text}&rdquo;</p>
                                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                    <div style={{
-                                        width: "30px", height: "30px", borderRadius: "50%",
-                                        background: "var(--border-bright)", display: "flex", alignItems: "center",
-                                        justifyContent: "center", flexShrink: 0,
-                                    }}>
+                                    <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "var(--border-bright)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                         <span className="mono" style={{ fontSize: "9px", fontWeight: "700" }}>{t.avatar}</span>
                                     </div>
                                     <div>
@@ -769,50 +411,22 @@ export default function LandingClient() {
                 </section>
 
                 {/* ── FINAL CTA ── */}
-                <section style={{
-                    borderTop: "1px solid var(--border)",
-                    padding: "100px 24px",
-                    maxWidth: "600px", margin: "0 auto", width: "100%", textAlign: "center",
-                }}>
-                    <h2 style={{
-                        fontSize: "clamp(40px, 9vw, 72px)", fontWeight: "700",
-                        lineHeight: 0.95, letterSpacing: "-0.035em", marginBottom: "24px",
-                    }}>
-                        75 DAYS.<br />
-                        <span style={{ color: "var(--text-muted)" }}>WHO WILL</span><br />
-                        YOU BE?
+                <section style={{ borderTop: "1px solid var(--border)", padding: "100px 24px", maxWidth: "600px", margin: "0 auto", width: "100%", textAlign: "center" }}>
+                    <h2 style={{ fontSize: "clamp(40px, 9vw, 72px)", fontWeight: "700", lineHeight: 0.95, letterSpacing: "-0.035em", marginBottom: "24px" }}>
+                        75 DAYS.<br /><span style={{ color: "var(--text-muted)" }}>WHO WILL</span><br />YOU BE?
                     </h2>
                     <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "36px", lineHeight: 1.75, maxWidth: "380px", margin: "0 auto 36px" }}>
-                        A year from now, you&apos;ll either have done this or have another reason why you didn&apos;t.
-                        The people who finish aren&apos;t special. They just started.
+                        A year from now, you&apos;ll either have done this or have another reason why you didn&apos;t. The people who finish aren&apos;t special. They just started.
                     </p>
-                    <motion.button
-                        onClick={openLogin}
-                        whileHover={{ scale: 1.018 }}
-                        whileTap={{ scale: 0.975 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                        style={{
-                            padding: "16px 44px", background: "var(--accent)", color: "#000",
-                            border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: "700",
-                            fontFamily: "var(--font-body)", cursor: "pointer",
-                            display: "inline-flex", alignItems: "center", gap: "8px",
-                        }}
-                    >
+                    <motion.a href="/onboarding" whileHover={{ scale: 1.018 }} whileTap={{ scale: 0.975 }} transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "16px 44px", background: "var(--accent)", color: "#000", textDecoration: "none", borderRadius: "8px", fontSize: "14px", fontWeight: "700", fontFamily: "var(--font-body)" }}>
                         Start the challenge
-                        <ArrowUpRight size={15} />
-                    </motion.button>
-                    <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "14px" }}>
-                        One-time payment · $4 · No subscription · No refunds
-                    </p>
+                        <ArrowRight size={15} />
+                    </motion.a>
                 </section>
 
                 {/* ── FOOTER ── */}
-                <footer style={{
-                    borderTop: "1px solid var(--border)",
-                    padding: "20px 32px",
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    flexWrap: "wrap", gap: "12px",
-                }}>
+                <footer style={{ borderTop: "1px solid var(--border)", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                     <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>75 Hard © 2025</span>
                     <div style={{ display: "flex", gap: "4px" }}>
                         <NavBtn label="Benefits" onClick={() => scrollTo("benefits")} />

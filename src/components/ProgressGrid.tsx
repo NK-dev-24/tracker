@@ -4,15 +4,19 @@ import { motion } from "framer-motion";
 import { TOTAL_DAYS } from "@/lib/tasks";
 
 interface ProgressGridProps {
-    currentDay: number; // 0 if not started
+    currentDay: number;
+    totalDays?: number;
     failedDays?: number[];
 }
 
 export default function ProgressGrid({
     currentDay,
+    totalDays = TOTAL_DAYS,
     failedDays = [],
 }: ProgressGridProps) {
-    const cells = Array.from({ length: TOTAL_DAYS }, (_, i) => i + 1);
+    const cells = Array.from({ length: totalDays }, (_, i) => i + 1);
+    // Adaptive columns: ~15 columns looks good for 75 days, scale proportionally
+    const cols = totalDays <= 31 ? 10 : totalDays <= 75 ? 15 : 18;
 
     return (
         <div>
@@ -24,32 +28,15 @@ export default function ProgressGrid({
                     marginBottom: "16px",
                 }}
             >
-                <span
-                    className="mono"
-                    style={{
-                        fontSize: "10px",
-                        letterSpacing: "0.2em",
-                        color: "var(--text-muted)",
-                        textTransform: "uppercase",
-                    }}
-                >
-                    75-DAY GRID
+                <span className="mono" style={{ fontSize: "10px", letterSpacing: "0.2em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                    {totalDays}-DAY GRID
                 </span>
-                <span
-                    className="mono"
-                    style={{ fontSize: "10px", color: "var(--text-muted)" }}
-                >
-                    {Math.max(0, currentDay)} / {TOTAL_DAYS}
+                <span className="mono" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                    {Math.max(0, currentDay)} / {totalDays}
                 </span>
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(15, 1fr)",
-                    gap: "4px",
-                }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "4px" }}>
                 {cells.map((day) => {
                     const isDone = day < currentDay;
                     const isToday = day === currentDay;

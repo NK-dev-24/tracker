@@ -41,8 +41,8 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // /onboarding → only needs auth, not payment
-    if (pathname.startsWith("/onboarding")) {
+    // /onboarding and /tracker → only need auth, not payment
+    if (pathname.startsWith("/onboarding") || pathname.startsWith("/tracker")) {
         return supabaseResponse;
     }
 
@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL("/onboarding", request.url));
         }
         if (!profile?.has_paid) {
-            return NextResponse.redirect(new URL("/onboarding?step=paywall", request.url));
+            return NextResponse.redirect(new URL("/onboarding/complete", request.url));
         }
     }
 
