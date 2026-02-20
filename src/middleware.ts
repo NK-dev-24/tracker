@@ -27,23 +27,20 @@ export async function middleware(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     const { pathname } = request.nextUrl;
 
-    // Always allow: public, auth, api routes
+    // Always allow: public pages, auth, api, onboarding + free tracker (no auth needed)
     if (
         pathname === "/" ||
         pathname.startsWith("/auth") ||
-        pathname.startsWith("/api")
+        pathname.startsWith("/api") ||
+        pathname.startsWith("/onboarding") ||
+        pathname.startsWith("/tracker")
     ) {
         return supabaseResponse;
     }
 
-    // Not logged in → landing
+    // Any remaining route requires authentication
     if (!user) {
         return NextResponse.redirect(new URL("/", request.url));
-    }
-
-    // /onboarding and /tracker → only need auth, not payment
-    if (pathname.startsWith("/onboarding") || pathname.startsWith("/tracker")) {
-        return supabaseResponse;
     }
 
     // /dashboard → needs paid
