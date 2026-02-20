@@ -10,8 +10,19 @@ export default function LoginForm() {
     const [sent, setSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const isConfigured =
+        typeof window !== "undefined" &&
+        process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_project_url";
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!isConfigured) {
+            setError("Supabase is not configured yet. Fill in .env.local first.");
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
