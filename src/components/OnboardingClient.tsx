@@ -345,17 +345,24 @@ function StepAccount({ userData }: { userData: UserData }) {
         setLoading(true);
         setError(null);
         try {
-            // Persist onboarding data across OAuth redirect
-            sessionStorage.setItem("75hard-onboarding", JSON.stringify({ name: userData.name, days: userData.days, tasks: userData.tasks }));
-
             const isConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_project_url";
             if (!isConfigured) { setError("Supabase not configured — fill in .env.local first."); setLoading(false); return; }
+
+            // Encode onboarding data into the callback URL so the server can save it
+            // directly during the auth exchange (when session is 100% valid)
+            const payload = JSON.stringify({ name: userData.name, days: userData.days, tasks: userData.tasks });
+            const encoded = btoa(unescape(encodeURIComponent(payload)));
+
+            // Also keep localStorage as fallback
+            localStorage.setItem("75hard-onboarding", payload);
 
             const { createClient } = await import("@/lib/supabase/client");
             const supabase = createClient();
             const { error: err } = await supabase.auth.signInWithOAuth({
                 provider: "google",
-                options: { redirectTo: `${window.location.origin}/auth/callback?next=/onboarding/complete` },
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback?od=${encodeURIComponent(encoded)}`,
+                },
             });
             if (err) { setError(err.message); setLoading(false); }
         } catch { setError("Something went wrong. Try again."); setLoading(false); }

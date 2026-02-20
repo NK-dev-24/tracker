@@ -72,6 +72,9 @@ async function signInWithGoogle() {
     if (!isConfigured) { alert("Supabase not configured — fill in .env.local first."); return; }
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
+    // If already logged in, skip OAuth and go straight to dashboard
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) { window.location.href = "/dashboard"; return; }
     await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback` } });
 }
 
@@ -163,6 +166,34 @@ export default function LandingClient() {
         } catch { /* ignore */ }
         setHydrated(true);
     }, []);
+
+    // Detect existing session — redirect logged-in users automatically
+    useEffect(() => {
+        const isConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL &&
+            process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_project_url";
+        if (!isConfigured) return;
+
+        import("@/lib/supabase/client").then(({ createClient }) => {
+            const supabase = createClient();
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (!session) return;
+                // User is logged in — check their profile and redirect
+                supabase
+                    .from("profiles")
+                    .select("has_paid, onboarding_complete")
+                    .eq("id", session.user.id)
+                    .single()
+                    .then(({ data: profile }) => {
+                        if (profile?.onboarding_complete && profile?.has_paid) {
+                            window.location.href = "/dashboard";
+                        } else {
+                            window.location.href = "/onboarding/complete";
+                        }
+                    });
+            });
+        });
+    }, []);
+
 
     useEffect(() => {
         if (hydrated) {

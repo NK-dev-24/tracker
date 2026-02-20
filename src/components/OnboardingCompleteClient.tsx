@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, ArrowUpRight } from "lucide-react";
+import { Check, ArrowUpRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface OnboardingData {
@@ -11,81 +11,72 @@ interface OnboardingData {
     tasks: { id: string; label: string; description: string }[];
 }
 
-async function saveProfile(data: OnboardingData) {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-
-    const today = new Date().toISOString().split("T")[0];
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + data.days - 1);
-    const endStr = endDate.toISOString().split("T")[0];
-
-    // Upsert profile
-    await supabase.from("profiles").upsert({
-        id: user.id,
-        email: user.email,
-        name: data.name || user.user_metadata?.full_name || user.email?.split("@")[0],
-        onboarding_complete: true,
-    }, { onConflict: "id" });
-
-    // Upsert challenge
-    await supabase.from("challenges").upsert({
-        user_id: user.id,
-        duration: data.days,
-        start_date: today,
-        end_date: endStr,
-        current_day: 1,
-        streak_active: true,
-        custom_tasks: data.tasks,
-    }, { onConflict: "user_id" });
-
-    return true;
-}
-
 export default function OnboardingCompleteClient() {
     const router = useRouter();
-    const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
-    const [saving, setSaving] = useState(true);
+    const [firstName, setFirstName] = useState("You");
+    const [days, setDays] = useState(75);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const paymentLink = process.env.NEXT_PUBLIC_DODO_PAYMENT_LINK || "#";
 
     useEffect(() => {
-        const raw = sessionStorage.getItem("75hard-onboarding");
+        // Read onboarding data from localStorage for display purposes
+        const raw = localStorage.getItem("75hard-onboarding");
         if (raw) {
             try {
                 const parsed = JSON.parse(raw) as OnboardingData;
-                setOnboardingData(parsed);
-                saveProfile(parsed)
-                    .then((ok) => { if (!ok) setError("Could not save your profile. Please try again."); })
+                setFirstName(parsed.name?.split(" ")[0] || "You");
+                setDays(parsed.days || 75);
+
+                // The auth/callback already saved the profile server-side.
+                // But if for some reason it didn't (localStorage still present AND
+                // profile shows not complete), try saving via API as fallback.
+                setSaving(true);
+                fetch("/api/save-profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: parsed.name, days: parsed.days, tasks: parsed.tasks }),
+                })
+                    .then(async (res) => {
+                        const json = await res.json();
+                        if (res.ok || json.error?.includes("already")) {
+                            localStorage.removeItem("75hard-onboarding");
+                        } else if (res.status !== 401) {
+                            // Only show non-auth errors (401 = callback already saved, all good)
+                            setError(json.error ?? "Could not save profile.");
+                        } else {
+                            // 401 is fine — callback already saved the profile
+                            localStorage.removeItem("75hard-onboarding");
+                        }
+                    })
+                    .catch(() => {
+                        // Network error — ignore, callback may have already saved
+                    })
                     .finally(() => setSaving(false));
-            } catch { setError("Session data lost. Please start onboarding again."); setSaving(false); }
-        } else {
-            // User may already have completed onboarding (returning user)
-            setSaving(false);
+            } catch {
+                setSaving(false);
+            }
         }
     }, []);
 
     if (saving) {
         return (
-            <div style={{ minHeight: "100svh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.14em" }}>SAVING YOUR CHALLENGE...</span>
+            <div style={{ minHeight: "100svh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px" }}>
+                <Loader2 size={20} color="var(--accent)" style={{ animation: "spin 1s linear infinite" }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.14em" }}>LOCKING IN YOUR CHALLENGE...</span>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div style={{ minHeight: "100svh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-                <p style={{ color: "var(--danger)", marginBottom: "16px" }}>{error}</p>
+            <div style={{ minHeight: "100svh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", gap: "16px" }}>
+                <p style={{ color: "var(--danger)", textAlign: "center", maxWidth: "360px", fontSize: "14px", lineHeight: 1.6 }}>{error}</p>
                 <a href="/onboarding" style={{ color: "var(--accent)", fontSize: "13px" }}>Start again →</a>
             </div>
         );
     }
-
-    const firstName = onboardingData?.name?.split(" ")[0] ?? "You";
 
     return (
         <div style={{ minHeight: "100svh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
@@ -102,7 +93,7 @@ export default function OnboardingCompleteClient() {
                             You&apos;re committed,<br />{firstName}.
                         </h1>
                         <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: 1.7 }}>
-                            {onboardingData?.days ?? 75}-day challenge saved. Now choose how seriously you want to track it.
+                            {days}-day challenge locked in. Now choose how seriously you want to track it.
                         </p>
                     </div>
 
@@ -119,7 +110,7 @@ export default function OnboardingCompleteClient() {
                             {[
                                 "Daily progress saved forever",
                                 "Streak resets at midnight if you miss a task",
-                                "Visual progress grid for all " + (onboardingData?.days ?? 75) + " days",
+                                `Visual progress grid for all ${days} days`,
                                 "Custom tasks locked in from your onboarding",
                                 "Motivational messages at key milestone days",
                             ].map((f) => (
